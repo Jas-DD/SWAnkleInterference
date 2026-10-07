@@ -1,0 +1,22 @@
+# Local tools and editor state
+.agents/
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Build products and local SolidWorks interop assemblies
+**/bin/
+**/obj/
+*.pdb
+
+# Generated datasets, plots and distribution packages
+outputs/
+*.zip
+
+# Local credentials and logs
+.env
+.env.*
+*.log
+__pycache__/
+*.pyc
