@@ -1,60 +1,74 @@
-# SolidWorks 手指机构角度与坐标扫描插件
+# SolidWorks Fingertip Workspace Scanner
 
-在 SolidWorks 装配体中驱动两个角度配合，记录选定指尖点的三维坐标，用于建立关节角度与指尖位置之间的数据映射。
+A SolidWorks add-in for exploring robotic finger motion and collecting the relationship between two joint angles and fingertip position in 3D.
 
-## 主要功能
+Developed for a robotic hand project, this tool automates angle-mate sweeps inside a CAD assembly and exports position samples for workspace analysis and downstream control algorithms. The original interference checker evolved into a coordinate-sampling tool for finger and thumb mechanisms.
 
-- 设置两个关节的扫描范围及粗、中、细步长，也可固定一个关节。
-- 快速扫描并导出目标角度、角度读数、到达状态及点坐标 XYZ。
-- 扫描时可开启或关闭干涉计算。
-- 递归搜索已加载子装配中的角度配合。
-- 通过 `Pick J1 mate` / `Pick J2 mate` 直接选择配合，避免同名配合造成歧义。
-- 选择扫描点，并支持平面角度测量、实时点与角度跟踪。
+## Engineering Context
 
-直接选择配合时，角度读数优先来自配合的 D1 尺寸。该读数与机构求解后的几何夹角并非始终等价，约束冲突时仍需结合模型状态检查采样结果。
+A linked finger mechanism does not necessarily reach every requested combination of joint angles. Manually moving the assembly and recording fingertip positions is time-consuming, especially when the joints live inside nested subassemblies.
 
-## 项目文件
+This add-in brings joint selection, motion scanning, coordinate capture, and CSV export into one SolidWorks workflow. The resulting samples can support lookup tables and interpolation for mapping a desired fingertip position back to joint commands. Those control algorithms are downstream uses of the data, rather than part of this add-in.
 
-主要项目位于 `SW_Plugin_v3/SW_Plugin_fixed/solidworks_plugin/`：
+## Features
 
-- `SWAnkleInterference.cs`：当前 C# 插件源码。
-- `SWAnkleInterference.csproj`：x64 / .NET Framework 4.7.2 项目。
-- `Properties/AssemblyInfo.cs`：程序集信息。
-- `register.bat`：COM 插件注册脚本。
-- `SWAnkleInterference.py`：保留的 Python 版本，功能以当前 C# 插件为准。
-- 子目录中的 `README.md`：早期版本说明，当前构建与使用以本页为准。
+- **Two-joint scanning:** configure angle ranges and coarse, medium, and fine steps, or hold one joint fixed.
+- **Fingertip coordinate sampling:** select a point and record its XYZ position alongside target angles, angle readbacks, and reachability status.
+- **Optional interference checks:** enable collision analysis when needed, or disable it for faster coordinate collection.
+- **Nested assembly support:** recursively search loaded subassemblies for angle mates.
+- **Direct mate selection:** use `Pick J1 mate` and `Pick J2 mate` to identify joints without relying only on names.
+- **Additional measurement tools:** plane-angle measurement and real-time point and angle tracking.
+- **CSV export:** take collected samples into plotting, analysis, and embedded-control workflows.
 
-本地采样数据、图表、压缩包和编译输出不纳入版本控制。
+## Implementation
 
-## 构建
+The current add-in is written in **C#**, targets **.NET Framework 4.7.2 / x64**, and uses the **SolidWorks COM API** with a **Windows Forms** interface.
 
-需要 Windows、SolidWorks、Visual Studio / Build Tools，以及 .NET Framework 4.7.2 开发工具。
+The source project is located in [`SW_Plugin_v3/SW_Plugin_fixed/solidworks_plugin/`](SW_Plugin_v3/SW_Plugin_fixed/solidworks_plugin/).
 
-从本机 SolidWorks 安装目录的 `api/redist` 中获取以下程序集，放到项目目录的 `bin/Debug/` 中，以匹配当前项目的引用路径：
+| File | Purpose |
+| --- | --- |
+| `SWAnkleInterference.cs` | Current add-in implementation |
+| `SWAnkleInterference.csproj` | C# project and build configuration |
+| `Properties/AssemblyInfo.cs` | Assembly metadata |
+| `register.bat` | COM registration script |
+| `SWAnkleInterference.py` | Earlier Python implementation retained for reference |
+
+The original `SWAnkleInterference` name remains in the assembly and source files. Local datasets, plots, distribution archives, and build outputs are excluded from this repository.
+
+## Build
+
+Requirements: Windows, SolidWorks, Visual Studio or MSBuild tools, and the .NET Framework 4.7.2 developer tools.
+
+Copy the following assemblies from your SolidWorks installation's `api/redist` directory into the project's `bin/Debug/` directory, matching the reference paths in the current project:
 
 - `SolidWorks.Interop.sldworks.dll`
 - `SolidWorks.Interop.swconst.dll`
 - `SolidWorks.Interop.swpublished.dll`
 
-这些 SolidWorks 程序集不随源码仓库分发。使用安装版本对应的 API 文件。
+SolidWorks interop assemblies are not distributed with this repository. Use the API assemblies supplied with your installation.
 
-在 Visual Studio 打开项目，选择 `Release`、`x64` 并生成，或在开发者命令行执行：
+Open the project in Visual Studio and build **Release / x64**, or run this command from a developer shell at the repository root:
 
 ```powershell
 msbuild "SW_Plugin_v3/SW_Plugin_fixed/solidworks_plugin/SWAnkleInterference.csproj" /p:Configuration=Release /p:Platform=x64
 ```
 
-生成文件位于项目目录的 `bin/Release/`。
+Build output is written to the project's `bin/Release/` directory.
 
-## 安装与使用
+## Run a Scan
 
-1. 关闭 SolidWorks，构建当前源码。
-2. 在项目目录中以管理员身份运行 `register.bat`。
-3. 重新打开 SolidWorks，在插件列表中启用本插件。
-4. 打开总装配；需要运动的子装配设为 Flexible，并确保组件已解析且未被压缩。
-5. 在特征树中选中关节配合，分别点击 `Pick J1 mate`、`Pick J2 mate`。
-6. 选中要记录的指尖点，点击 `Pick scan point`。
-7. 设置角度范围与步长；只采集坐标时可关闭干涉计算。
-8. 开始扫描，完成后导出 CSV。
+1. Close SolidWorks and build the current source.
+2. Run `register.bat` in the project directory as an administrator.
+3. Reopen SolidWorks and enable the add-in in the Add-ins dialog.
+4. Open the top-level assembly. Set moving subassemblies to **Flexible** and ensure their components are resolved and not suppressed.
+5. Select each joint's angle mate in the feature tree, then click `Pick J1 mate` or `Pick J2 mate`.
+6. Select the fingertip point to record and click `Pick scan point`.
+7. Set the joint ranges and step sizes. Disable interference calculation when only coordinate samples are needed.
+8. Start the scan and export the results as CSV.
 
-注册脚本会检查 DLL 是否早于源码；源码修改后需要重新构建。注册使用当前 DLL 的文件路径，注册后移动项目目录需要重新注册。
+## Measurement Considerations
+
+When a mate is selected directly, angle readback prioritizes its D1 dimension. A mate dimension is not always equivalent to the solved geometric angle, particularly when constraints conflict. Inspect the assembly state and validate collected samples before using them for control.
+
+The registration script checks whether the DLL is older than the source. Rebuild after source changes, and register again if you move the project directory because COM registration uses the DLL's location.
